@@ -135,7 +135,6 @@
 
         //app.stage.updateLayersOrder();
         /*
-
             These are the different choice on can have to bind a mouse / touch listener
 
             .on('mousedown', onDragStart)
@@ -245,14 +244,10 @@
             matrix.length <=  posXWithAdd || matrix[0].length <= posYWithAdd)
             return;
 
-        var tile0 = matrix[position[0]]; // First row on the left
+        var tile0 = xAdd > 0 ? matrix[position[0]] : matrix[position[0]-1]; // First row on the left
         var tile1 = matrix[Math.ceil(position[0] + dimension[0])]; // First row on the right
 
-        removeVerticalRowsOutofView(stage,position,dimension,xAdd > 0 ? tile1 : tile0);
-
-        if (yAdd > 0) {
-            tile1 = matrix[Math.ceil(position[0] + dimension[0])]; // First row on the right
-        }
+        removeVerticalRowsOutofView(stage,position,dimension,xAdd > 0 ? tile0 : tile1);
 
         for (x = position[0]; x < position[0] + dimension[0]; x++) {
             for (y = position[1]; y < position[1] + dimension[1]; y++) {
