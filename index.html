@@ -217,31 +217,39 @@
         }
     }
 
+
     function moveRight(stage, matrix, dimension, position,cellSize) {
-        move(stage,matrix,dimension,position,1,0,cellSize);
+        moveH(stage,matrix,dimension,position,1,cellSize);
     }
 
     function moveLeft(stage, matrix, dimension,position,cellSize) {
-        move(stage,matrix,dimension,position,-1,0,cellSize)
+        moveH(stage,matrix,dimension,position,-1,cellSize)
     }
 
-    function moveTop(stage, matrix, dimension) {
-
+    function moveTop(stage, matrix, dimension,position,cellSize) {
+        moveV(stage,matrix,dimension,position,-1,cellSize);
     }
 
-    function moveBottom(stage, matrix, dimension) {
-
+    function moveBottom(stage, matrix, dimension,position,cellSize) {
+        moveV(stage,matrix,dimension,position,1,cellSize)
     }
 
-    function move(stage, matrix, dimension, position,xAdd,yAdd,cellSize) {
+    /**
+     *
+     * @param stage
+     * @param matrix
+     * @param dimension
+     * @param position
+     * @param xAdd
+     * @param cellSize
+     */
+    function moveH(stage, matrix, dimension, position,xAdd,cellSize) {
         var x, y, z;
         var sprite;
 
         var posXWithAdd = position[0] + dimension[0] + xAdd;
-        var posYWithAdd = position[1] + dimension[1] + yAdd;
 
-        if ( position[0] + xAdd < 0 || position[1] + yAdd < 0 ||
-            matrix.length <=  posXWithAdd || matrix[0].length <= posYWithAdd)
+        if ( position[0] + xAdd < 0 || matrix.length <=  posXWithAdd )
             return;
 
         var tile0 = xAdd > 0 ? matrix[position[0]] : matrix[position[0]-1]; // First row on the left
@@ -252,10 +260,8 @@
         for (x = position[0]; x < position[0] + dimension[0]; x++) {
             for (y = position[1]; y < position[1] + dimension[1]; y++) {
                 for (z = 0; z < 4; z++) {
-
                     sprite = matrix[x][y][z];
                     sprite.x -= xAdd * cellSize;
-                    sprite.y -= yAdd * cellSize;
                 }
             }
         }
@@ -271,9 +277,60 @@
         stage.updateLayersOrder();
 
         position[0] += xAdd;
+    }
+
+    /**
+     *
+     * @param stage
+     * @param matrix
+     * @param dimension
+     * @param position
+     * @param yAdd
+     * @param cellSize
+     */
+    function moveV(stage, matrix, dimension, position,yAdd,cellSize) {
+        var x, y, z;
+        var sprite;
+
+        var posYWithAdd = position[1] + dimension[1] + yAdd;
+
+        if (position[1] + yAdd < 0 || matrix[0].length <= posYWithAdd)
+            return;
+
+        var tile0 = yAdd > 0 ? matrix[position[0]][position[1]] : matrix[position[1]-1]; // First row on the top
+        var tile1 = matrix[position[0]][Math.ceil(position[1] + dimension[1])]; // First row on the bottom
+
+        removeHorizontalRowsOutofView(stage,position,dimension,yAdd > 0 ? tile0 : tile1);
+
+        for (x = position[1]; x < position[0] + dimension[0]; x++) {
+            for (y = position[1]; y < position[1] + dimension[1]; y++) {
+                for (z = 0; z < 4; z++) {
+                    sprite = matrix[x][y][z];
+                    sprite.y -= yAdd * cellSize;
+                }
+            }
+        }
+
+        for (x = position[0]; x < position[0] + dimension[0]; y++) {
+            for (z = 0; z < 4; z++) {
+                sprite = yAdd > 0 ? tile1[y][z] : tile0[y][z];
+                sprite.y = yAdd > 0 ? Math.floor(dimension[1] - 1) * cellSize : 0;
+                stage.addChild(sprite);
+            }
+        }
+
+        stage.updateLayersOrder();
+
         position[1] += yAdd;
     }
 
+    /**
+     *
+     * @param stage
+     * @param position
+     * @param dimension
+     * @param tile
+     */
     function removeVerticalRowsOutofView(stage,position,dimension,tile) {
         var  y, z;
         for (y = position[1]; y < position[1] + dimension[1]; y++) {
@@ -281,6 +338,17 @@
                 stage.removeChild(tile[y][z]);
             }
         }
+    }
+
+    /**
+     *
+     * @param stage
+     * @param position
+     * @param dimension
+     * @param tile
+     */
+    function removeHorizontalRowsOutofView(stage,position,dimension,tile) {
+
     }
 
 
