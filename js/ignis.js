@@ -1,3 +1,8 @@
+const DIRECTION_UP = 0x0;
+const DIRECTION_DOWN = 0x1;
+const DIRECTION_LEFT = 0x2;
+const DIRECTION_RIGHT = 0x3;
+
 function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -29,8 +34,8 @@ function getFullscreenDimension() {
         dimension.push(window.screen.width * window.devicePixelRatio / 2);
         dimension.push(window.screen.height * window.devicePixelRatio / 2);
     } else {
-        dimension.push(window.innerWidth * window.devicePixelRatio);
-        dimension.push(window.innerHeight * window.devicePixelRatio);
+        dimension.push((window.innerWidth) * window.devicePixelRatio);
+        dimension.push((window.innerHeight) * window.devicePixelRatio);
     }
 
     return dimension;
@@ -40,8 +45,17 @@ function startApp() {
     var dimension = getFullscreenDimension();
     var app = new PIXI.Application(dimension[0], dimension[1], {backgroundColor: 0x1099bb});
     var canvas = app.view;
+    var mouseInside = false;
 
-    document.body.appendChild(app.view);
+    document.body.appendChild(canvas);
+    canvas.onmouseleave = function(event) {
+        mouseInside = false;
+    };
+
+    canvas.onmouseenter = function(event) {
+        mouseInside = true;
+    };
+
     var tileset = PIXI.Texture.fromImage("res/cave.png");
 
     var tile = [];
@@ -52,21 +66,22 @@ function startApp() {
 
     var mapWidth = 250;
     var mapHeight = 50;
+    var layerCount = 3;
 
     var matrix = new Array(mapWidth);
 
     for (var i = 0; i < mapWidth; i++) {
         matrix[i] = new Array(mapHeight);
         for (var j = 0; j < mapHeight; j++) {
-            matrix[i][j] = new Array(4);
-            for (var z = 0; z < 4; z++) {
+            matrix[i][j] = new Array(layerCount);
+            for (var z = 0; z < layerCount; z++) {
 
                 var spriteTile = null;
 
                 if (i * 32 < dimension[0] && j * 32 < dimension[1]) {
                     spriteTile = new PIXI.Sprite(tile[z]);
                 } else {
-                    spriteTile = new PIXI.Sprite(tile[3 - z]);
+                    spriteTile = new PIXI.Sprite(tile[layerCount - z]);
                 }
 
                 spriteTile.x = i * 32;
@@ -131,6 +146,7 @@ function startApp() {
         .on('touchmove', onDragMove);
      */
 
+
     app.stage.mousemove = function (event) {
         mouseX = Math.floor(event.data.global.x / 32) * 32;
         mouseY = Math.floor(event.data.global.y / 32) * 32;
@@ -158,8 +174,10 @@ function startApp() {
     app.ticker.add(function (delta) {
         graphics.clear();
         //graphics.drawRect(getRandomInt(0, dimension[0]), getRandomInt(0, dimension[1]), 32, 32);
-        graphics.drawRect(mouseX,mouseY, 96, 160);
-        //moveRight(app.stage, matrix, dim, position);
+        cursorSprite.visible = mouseInside;
+        if (mouseInside) {
+            graphics.drawRect(mouseX, mouseY, 96, 160);
+        }
 
         right.press = function() {
             moveRight(app.stage, matrix, dim, position,32);
@@ -167,6 +185,14 @@ function startApp() {
 
         left.press = function() {
             moveLeft(app.stage,matrix,dim,position,32);
+        };
+
+        up.press = function() {
+            moveTop(app.stage,matrix,dim,position,32);
+        };
+
+        down.press = function() {
+            moveBottom(app.stage,matrix,dim,position,32);
         }
 
     });
@@ -193,7 +219,7 @@ function hanldeScreenBuild(stage, matrix, dimension) {
     for (var i = 0; i < maxX; i++) {
         for (var j = 0; j < maxY; j++) {
 
-            for (var z = 0; z < 4; z++) {
+            for (var z = 0; z < matrix[0][0].length; z++) {
                 var sprite = matrix[i][j][z];
                 stage.addChild(sprite);
             }
@@ -228,38 +254,25 @@ function moveBottom(stage, matrix, dimension,position,cellSize) {
  * @param cellSize
  */
 function moveH(stage, matrix, dimension, position,xAdd,cellSize) {
-    var x, y, z;
-    var sprite;
+    var y, z;
 
     var posXWithAdd = position[0] + dimension[0] + xAdd;
-
     if ( position[0] + xAdd < 0 || matrix.length <=  posXWithAdd )
         return;
 
-    var tile0 = xAdd > 0 ? matrix[position[0]] : matrix[position[0]-1]; // First row on the left
-    var tile1 = matrix[Math.ceil(position[0] + dimension[0])]; // First row on the right
+    var leftYRow = xAdd > 0 ? matrix[position[0]] : matrix[position[0]-1]; // First row on the left
+    var rightYRow = matrix[Math.ceil(position[0] + dimension[0])]; // First row on the right
 
-    removeVerticalRowsOutofView(stage,position,dimension,xAdd > 0 ? tile0 : tile1);
-
-    for (x = position[0]; x < position[0] + dimension[0]; x++) {
-        for (y = position[1]; y < position[1] + dimension[1]; y++) {
-            for (z = 0; z < 4; z++) {
-                sprite = matrix[x][y][z];
-                sprite.x -= xAdd * cellSize;
-            }
-        }
-    }
+    removeVerticalRowsOutofView(stage,position,dimension,xAdd > 0 ? leftYRow : rightYRow);
+    moveWorld(matrix,xAdd,0,cellSize);
 
     for (y = position[1]; y < position[1] + dimension[1]; y++) {
-        for (z = 0; z < 4; z++) {
-            sprite = xAdd > 0 ? tile1[y][z] : tile0[y][z];
-            sprite.x = xAdd > 0 ? Math.floor(dimension[0] - 1) * cellSize : 0;
-            stage.addChild(sprite);
+        for (z = 0; z < rightYRow[0].length; z++) {
+            stage.addChild(xAdd > 0 ? rightYRow[y][z] : leftYRow[y][z]);
         }
     }
 
     stage.updateLayersOrder();
-
     position[0] += xAdd;
 }
 
@@ -273,39 +286,53 @@ function moveH(stage, matrix, dimension, position,xAdd,cellSize) {
  * @param cellSize
  */
 function moveV(stage, matrix, dimension, position,yAdd,cellSize) {
-    var x, y, z;
-    var sprite;
+    var x, z;
 
     var posYWithAdd = position[1] + dimension[1] + yAdd;
-
     if (position[1] + yAdd < 0 || matrix[0].length <= posYWithAdd)
         return;
 
-    var tile0 = yAdd > 0 ? matrix[position[0]][position[1]] : matrix[position[1]-1]; // First row on the top
-    var tile1 = matrix[position[0]][Math.ceil(position[1] + dimension[1])]; // First row on the bottom
+    removeHorizontalRowsOutofView(stage,position,dimension,matrix, yAdd > 0 ?  DIRECTION_DOWN : DIRECTION_UP);
+    moveWorld(matrix,0,yAdd,cellSize);
 
-    removeHorizontalRowsOutofView(stage,position,dimension,matrix);
+    var zRow;
+    for (x = position[0]; x < position[0] + dimension[0]; x++) {
+        zRow = matrix[x][yAdd > 0 ? position[1] + dimension[1] : position[1]];
 
-    for (x = position[1]; x < position[0] + dimension[0]; x++) {
-        for (y = position[1]; y < position[1] + dimension[1]; y++) {
-            for (z = 0; z < 4; z++) {
-                sprite = matrix[x][y][z];
-                sprite.y -= yAdd * cellSize;
-            }
-        }
-    }
-
-    for (x = position[0]; x < position[0] + dimension[0]; y++) {
-        for (z = 0; z < 4; z++) {
-            sprite = yAdd > 0 ? tile1[y][z] : tile0[y][z];
-            sprite.y = yAdd > 0 ? Math.floor(dimension[1] - 1) * cellSize : 0;
-            stage.addChild(sprite);
+        for (z = 0; z < zRow.length; z++) {
+            stage.addChild(zRow[z]);
         }
     }
 
     stage.updateLayersOrder();
-
     position[1] += yAdd;
+}
+
+
+/**
+ *
+ * @param matrix
+ * @param xAdd
+ * @param yAdd
+ * @param cellSize
+ */
+function moveWorld(matrix,xAdd,yAdd,cellSize) {
+
+    var x,y,z;
+    var yRow, zRow;
+    var sprite;
+
+    for (x = 0;x < matrix.length; x++)  {
+        yRow = matrix[x];
+        for (y = 0;y < yRow.length; y++)  {
+            zRow = yRow[y];
+            for (z = 0;z < zRow.length; z++)  {
+                sprite = zRow[z];
+                sprite.x -= xAdd * cellSize;
+                sprite.y -= yAdd * cellSize;
+            }
+        }
+    }
 }
 
 /**
@@ -313,15 +340,15 @@ function moveV(stage, matrix, dimension, position,yAdd,cellSize) {
  * @param stage
  * @param position
  * @param dimension
- * @param yLayer
+ * @param yRow
  */
-function removeVerticalRowsOutofView(stage,position,dimension,yLayer) {
+function removeVerticalRowsOutofView(stage,position,dimension,yRow) {
     var  y, z;
-    var zLayer;
+    var zRow;
     for (y = position[1]; y < position[1] + dimension[1]; y++) {
-        zLayer = yLayer[y];
-        for (z = 0; z < 4; z++) {
-            stage.removeChild(zLayer[z]);
+        zRow = yRow[y];
+        for (z = 0; z < zRow.length; z++) {
+            stage.removeChild(zRow[z]);
         }
     }
 }
@@ -332,17 +359,15 @@ function removeVerticalRowsOutofView(stage,position,dimension,yLayer) {
  * @param position
  * @param dimension
  * @param matrix
+ * @param direction
  */
-function removeHorizontalRowsOutofView(stage,position,dimension,matrix) {
-    var  x,y,z;
-    var yLayer, zLayer;
+function removeHorizontalRowsOutofView(stage,position,dimension,matrix,direction) {
+    var  x,z;
+    var zRow;
     for (x = position[0]; x < position[0] + dimension[0]; x++) {
-        yLayer = matrix[x];
-        for (y = position[1];position[1] + dimension[1]; y++) {
-            zLayer = yLayer[y];
-            for (z = 0; z < 4; z++) {
-                stage.removeChild(zLayer[z]);
-            }
+        zRow = matrix[x][direction === DIRECTION_DOWN ? position[1]: position[1]+dimension[1]];
+        for (z = 0; z < zRow; z++) {
+            stage.removeChild(zRow[z]);
         }
     }
 }
