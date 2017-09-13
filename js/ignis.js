@@ -284,7 +284,7 @@ function moveV(stage, matrix, dimension, position,yAdd,cellSize) {
     var tile0 = yAdd > 0 ? matrix[position[0]][position[1]] : matrix[position[1]-1]; // First row on the top
     var tile1 = matrix[position[0]][Math.ceil(position[1] + dimension[1])]; // First row on the bottom
 
-    removeHorizontalRowsOutofView(stage,position,dimension,yAdd > 0 ? tile0 : tile1);
+    removeHorizontalRowsOutofView(stage,position,dimension,matrix);
 
     for (x = position[1]; x < position[0] + dimension[0]; x++) {
         for (y = position[1]; y < position[1] + dimension[1]; y++) {
@@ -331,13 +331,18 @@ function removeVerticalRowsOutofView(stage,position,dimension,yLayer) {
  * @param stage
  * @param position
  * @param dimension
- * @param tile
+ * @param matrix
  */
-function removeHorizontalRowsOutofView(stage,position,dimension,tile) {
-    var  y, z;
-    for (y = position[1]; y < position[1] + dimension[1]; y++) {
-        for (z = 0; z < 4; z++) {
-            stage.removeChild(tile[y][z]);
+function removeHorizontalRowsOutofView(stage,position,dimension,matrix) {
+    var  x,y,z;
+    var yLayer, zLayer;
+    for (x = position[0]; x < position[0] + dimension[0]; x++) {
+        yLayer = matrix[x];
+        for (y = position[1];position[1] + dimension[1]; y++) {
+            zLayer = yLayer[y];
+            for (z = 0; z < 4; z++) {
+                stage.removeChild(zLayer[z]);
+            }
         }
     }
 }
