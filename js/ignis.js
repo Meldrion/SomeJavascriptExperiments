@@ -55,10 +55,12 @@ function startApp() {
     document.body.appendChild(canvas);
     canvas.onmouseleave = function(event) {
         mouseInside = false;
+        app.ticker.update();
     };
 
     canvas.onmouseenter = function(event) {
         mouseInside = true;
+        app.ticker.update();
     };
 
     var tileset = PIXI.Texture.fromImage("res/cave.png");
@@ -119,7 +121,7 @@ function startApp() {
     dim.push(Math.ceil(dimension[0] / (cellSize * zoom)));
     dim.push(Math.ceil(dimension[1] / (cellSize * zoom)));
 
-    hanldeScreenBuild(app.stage, matrix, dim,zoom);
+    hanldeScreenBuild(app.stage, matrix, dim);
 
     app.stage.addChild(cursorSprite);
 
@@ -220,19 +222,23 @@ function startApp() {
         down = keyboard(40);
 
     right.press = function() {
-        moveRight(app.stage, matrix, dim, position,cellSize);
+        moveRight(app.stage, matrix, dim, position,cellSize,zoom);
+        app.ticker.update();
     };
 
     left.press = function() {
-        moveLeft(app.stage,matrix,dim,position,cellSize);
+        moveLeft(app.stage,matrix,dim,position,cellSize,zoom);
+        app.ticker.update();
     };
 
     up.press = function() {
-        moveTop(app.stage,matrix,dim,position,cellSize);
+        moveTop(app.stage,matrix,dim,position,cellSize,zoom);
+        app.ticker.update();
     };
 
     down.press = function() {
-        moveBottom(app.stage,matrix,dim,position,cellSize);
+        moveBottom(app.stage,matrix,dim,position,cellSize,zoom);
+        app.ticker.update();
     };
 
 
@@ -257,7 +263,7 @@ window.onload = function () {
     startApp();
 };
 
-function hanldeScreenBuild(stage, matrix, dimension,zoom) {
+function hanldeScreenBuild(stage, matrix, dimension) {
 
     // Remove all children first
     while (stage.children[0]) {
@@ -278,20 +284,20 @@ function hanldeScreenBuild(stage, matrix, dimension,zoom) {
     }
 }
 
-function moveRight(stage, matrix, dimension, position,cellSize) {
-    moveH(stage,matrix,dimension,position,1,cellSize);
+function moveRight(stage, matrix, dimension, position,cellSize,zoom) {
+    moveH(stage,matrix,dimension,position,1,cellSize,zoom);
 }
 
-function moveLeft(stage, matrix, dimension,position,cellSize) {
-    moveH(stage,matrix,dimension,position,-1,cellSize)
+function moveLeft(stage, matrix, dimension,position,cellSize,zoom) {
+    moveH(stage,matrix,dimension,position,-1,cellSize,zoom)
 }
 
-function moveTop(stage, matrix, dimension,position,cellSize) {
-    moveV(stage,matrix,dimension,position,-1,cellSize);
+function moveTop(stage, matrix, dimension,position,cellSize,zoom) {
+    moveV(stage,matrix,dimension,position,-1,cellSize,zoom);
 }
 
-function moveBottom(stage, matrix, dimension,position,cellSize) {
-    moveV(stage,matrix,dimension,position,1,cellSize)
+function moveBottom(stage, matrix, dimension,position,cellSize,zoom) {
+    moveV(stage,matrix,dimension,position,1,cellSize,zoom)
 }
 
 /**
@@ -302,8 +308,9 @@ function moveBottom(stage, matrix, dimension,position,cellSize) {
  * @param position
  * @param xAdd
  * @param cellSize
+ * @param zoom
  */
-function moveH(stage, matrix, dimension, position,xAdd,cellSize) {
+function moveH(stage, matrix, dimension, position,xAdd,cellSize,zoom) {
     var y, z;
 
     var posXWithAdd = position[0] + dimension[0] + xAdd;
@@ -314,7 +321,7 @@ function moveH(stage, matrix, dimension, position,xAdd,cellSize) {
     var rightYRow = matrix[Math.ceil(position[0] + dimension[0])]; // First row on the right
 
     removeVerticalRowsOutofView(stage,position,dimension,xAdd > 0 ? leftYRow : rightYRow);
-    moveWorld(matrix,xAdd,0,cellSize);
+    moveWorld(matrix,xAdd,0,cellSize,zoom);
 
     for (y = position[1]; y < position[1] + dimension[1]; y++) {
         for (z = 0; z < rightYRow[0].length; z++) {
@@ -334,8 +341,9 @@ function moveH(stage, matrix, dimension, position,xAdd,cellSize) {
  * @param position
  * @param yAdd
  * @param cellSize
+ * @param zoom
  */
-function moveV(stage, matrix, dimension, position,yAdd,cellSize) {
+function moveV(stage, matrix, dimension, position,yAdd,cellSize,zoom) {
     var x, z;
 
     var posYWithAdd = position[1] + dimension[1] + yAdd;
@@ -343,7 +351,7 @@ function moveV(stage, matrix, dimension, position,yAdd,cellSize) {
         return;
 
     removeHorizontalRowsOutofView(stage,position,dimension,matrix, yAdd > 0 ?  DIRECTION_DOWN : DIRECTION_UP);
-    moveWorld(matrix,0,yAdd,cellSize);
+    moveWorld(matrix,0,yAdd,cellSize,zoom);
 
     var zRow;
     for (x = position[0]; x < position[0] + dimension[0]; x++) {
@@ -365,8 +373,9 @@ function moveV(stage, matrix, dimension, position,yAdd,cellSize) {
  * @param xAdd
  * @param yAdd
  * @param cellSize
+ * @param zoom
  */
-function moveWorld(matrix,xAdd,yAdd,cellSize) {
+function moveWorld(matrix,xAdd,yAdd,cellSize,zoom) {
 
     var x,y,z;
     var yRow, zRow;
@@ -378,8 +387,8 @@ function moveWorld(matrix,xAdd,yAdd,cellSize) {
             zRow = yRow[y];
             for (z = 0;z < zRow.length; z++)  {
                 sprite = zRow[z];
-                sprite.x -= xAdd * cellSize;
-                sprite.y -= yAdd * cellSize;
+                sprite.x -= xAdd * cellSize * zoom;
+                sprite.y -= yAdd * cellSize * zoom;
             }
         }
     }
