@@ -45,7 +45,7 @@ function startApp() {
     var dimension = getFullscreenDimension();
     var app = new PIXI.Application(dimension[0], dimension[1], {backgroundColor: 0x1099bb,
                                                                 autoStart: false,
-                                                                forceFXAA:true});
+                                                                forceFXAA:false});
     var canvas = app.view;
     var mouseInside = false;
 
@@ -164,6 +164,7 @@ function startApp() {
     var lastTime = -1;
     var inTimeOut = false;
     var lastEvent = null;
+    const MAX_REFRESH_TIME = 32;
     canvas.onmousemove = function(event) {
 
         lastEvent = event;
@@ -177,7 +178,7 @@ function startApp() {
             var time = date.getTime();
             var delta = time - lastTime;
 
-            if (delta > 16) {
+            if (delta > MAX_REFRESH_TIME) {
                 app.ticker.update();
                 lastTime = time;
             } else {
@@ -186,7 +187,7 @@ function startApp() {
                     window.setTimeout(function() {
                         inTimeOut = false;
                         canvas.onmousemove(lastEvent);
-                    },16 - delta);
+                    },MAX_REFRESH_TIME - delta);
                 }
             }
         }
@@ -202,6 +203,22 @@ function startApp() {
         right = keyboard(39),
         down = keyboard(40);
 
+    right.press = function() {
+        moveRight(app.stage, matrix, dim, position,32);
+    };
+
+    left.press = function() {
+        moveLeft(app.stage,matrix,dim,position,32);
+    };
+
+    up.press = function() {
+        moveTop(app.stage,matrix,dim,position,32);
+    };
+
+    down.press = function() {
+        moveBottom(app.stage,matrix,dim,position,32);
+    }
+
 
     app.stage.updateLayersOrder();
 
@@ -212,22 +229,6 @@ function startApp() {
         cursorSprite.visible = mouseInside;
         if (mouseInside) {
             graphics.drawRect(mouseX, mouseY, 96, 160);
-        }
-
-        right.press = function() {
-            moveRight(app.stage, matrix, dim, position,32);
-        };
-
-        left.press = function() {
-            moveLeft(app.stage,matrix,dim,position,32);
-        };
-
-        up.press = function() {
-            moveTop(app.stage,matrix,dim,position,32);
-        };
-
-        down.press = function() {
-            moveBottom(app.stage,matrix,dim,position,32);
         }
     });
 
