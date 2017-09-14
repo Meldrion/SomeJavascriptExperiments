@@ -31,8 +31,8 @@ function getFullscreenDimension() {
     var dimension = [];
 
     if (isMobile()) {
-        dimension.push(window.screen.width * window.devicePixelRatio / 2);
-        dimension.push(window.screen.height * window.devicePixelRatio / 2);
+        dimension.push(window.screen.width * window.devicePixelRatio);
+        dimension.push(window.screen.height * window.devicePixelRatio);
     } else {
         dimension.push((window.innerWidth) * window.devicePixelRatio);
         dimension.push((window.innerHeight) * window.devicePixelRatio);
@@ -42,10 +42,13 @@ function getFullscreenDimension() {
 }
 
 function startApp() {
+
     var dimension = getFullscreenDimension();
     var app = new PIXI.Application(dimension[0], dimension[1], {backgroundColor: 0x1099bb,
                                                                 autoStart: false,
-                                                                forceFXAA:false});
+                                                                forceFXAA:false,
+                                                                resolution:1});
+
     var canvas = app.view;
     var mouseInside = false;
 
@@ -59,6 +62,7 @@ function startApp() {
     };
 
     var tileset = PIXI.Texture.fromImage("res/cave.png");
+    tileset.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
 
     var tile = [];
     tile.push(new PIXI.Texture(tileset, new PIXI.Rectangle(0, 0, 32, 32)));
@@ -66,9 +70,14 @@ function startApp() {
     tile.push(new PIXI.Texture(tileset, new PIXI.Rectangle(64, 0, 32, 32)));
     tile.push(new PIXI.Texture(tileset, new PIXI.Rectangle(32, 32, 32, 32)));
 
+
+
     var mapWidth = 250;
     var mapHeight = 50;
     var layerCount = 3;
+    var zoom = 2;
+    var cellSize = 32;
+
 
     var matrix = new Array(mapWidth);
 
@@ -80,15 +89,18 @@ function startApp() {
 
                 var spriteTile = null;
 
-                if (i * 32 < dimension[0] && j * 32 < dimension[1]) {
+                if (i * cellSize * zoom < dimension[0] && j * cellSize * zoom < dimension[1]) {
                     spriteTile = new PIXI.Sprite(tile[z]);
                 } else {
                     spriteTile = new PIXI.Sprite(tile[layerCount - z]);
                 }
 
-                spriteTile.x = i * 32;
-                spriteTile.y = j * 32;
+                spriteTile.scale.x = zoom;
+                spriteTile.scale.y = zoom;
+                spriteTile.x = i * cellSize * zoom;
+                spriteTile.y = j * cellSize * zoom;
                 spriteTile.zIndex = 5+z;
+                //spriteTile.zoom
 
                 matrix[i][j][z] = spriteTile;
             }
@@ -98,14 +110,16 @@ function startApp() {
     // Cursor Tiles
     var cursorTexture = new PIXI.Texture(tileset, new PIXI.Rectangle(0,4*32,3*32,5*32));
     var cursorSprite = new PIXI.Sprite(cursorTexture);
+    cursorSprite.scale.x = zoom;
+    cursorSprite.scale.y = zoom;
     cursorSprite.alpha = 0.5;
     cursorSprite.zIndex = 11;
 
     var dim = [];
-    dim.push(Math.ceil(dimension[0] / 32));
-    dim.push(Math.ceil(dimension[1] / 32));
+    dim.push(Math.ceil(dimension[0] / (cellSize * zoom)));
+    dim.push(Math.ceil(dimension[1] / (cellSize * zoom)));
 
-    hanldeScreenBuild(app.stage, matrix, dim);
+    hanldeScreenBuild(app.stage, matrix, dim,zoom);
 
     app.stage.addChild(cursorSprite);
 
@@ -149,8 +163,9 @@ function startApp() {
      */
 
     app.stage.mousemove = function (event) {
-        mouseX = Math.floor(event.data.global.x / 32) * 32;
-        mouseY = Math.floor(event.data.global.y / 32) * 32;
+        var cellDotZoom = cellSize * zoom;
+        mouseX = Math.floor(event.data.global.x / cellDotZoom) * cellDotZoom;
+        mouseY = Math.floor(event.data.global.y / cellDotZoom) * cellDotZoom;
         cursorSprite.x = mouseX;
         cursorSprite.y = mouseY;
     };
@@ -168,8 +183,9 @@ function startApp() {
     canvas.onmousemove = function(event) {
 
         lastEvent = event;
-        var newX = Math.floor(event.x / 32);
-        var newY = Math.floor(event.y / 32);
+        var cellDotZoom = cellSize * zoom;
+        var newX = Math.floor(event.x / cellDotZoom);
+        var newY = Math.floor(event.y / cellDotZoom);
         if (oldX !== newX || oldY !== newY) {
             oldX = newX;
             oldY = newY;
@@ -204,20 +220,20 @@ function startApp() {
         down = keyboard(40);
 
     right.press = function() {
-        moveRight(app.stage, matrix, dim, position,32);
+        moveRight(app.stage, matrix, dim, position,cellSize);
     };
 
     left.press = function() {
-        moveLeft(app.stage,matrix,dim,position,32);
+        moveLeft(app.stage,matrix,dim,position,cellSize);
     };
 
     up.press = function() {
-        moveTop(app.stage,matrix,dim,position,32);
+        moveTop(app.stage,matrix,dim,position,cellSize);
     };
 
     down.press = function() {
-        moveBottom(app.stage,matrix,dim,position,32);
-    }
+        moveBottom(app.stage,matrix,dim,position,cellSize);
+    };
 
 
     app.stage.updateLayersOrder();
@@ -228,14 +244,9 @@ function startApp() {
         //graphics.drawRect(getRandomInt(0, dimension[0]), getRandomInt(0, dimension[1]), 32, 32);
         cursorSprite.visible = mouseInside;
         if (mouseInside) {
-            graphics.drawRect(mouseX, mouseY, 96, 160);
+            graphics.drawRect(mouseX, mouseY, 3*cellSize*zoom, 5*cellSize*zoom);
         }
     });
-
-    /*
-    window.setInterval(function() {
-        app.ticker.update();
-    },32);*/
 
     window.onresize = function () {
         app.renderer.resize(window.innerWidth, window.innerHeight);
@@ -246,7 +257,7 @@ window.onload = function () {
     startApp();
 };
 
-function hanldeScreenBuild(stage, matrix, dimension) {
+function hanldeScreenBuild(stage, matrix, dimension,zoom) {
 
     // Remove all children first
     while (stage.children[0]) {
@@ -266,7 +277,6 @@ function hanldeScreenBuild(stage, matrix, dimension) {
         }
     }
 }
-
 
 function moveRight(stage, matrix, dimension, position,cellSize) {
     moveH(stage,matrix,dimension,position,1,cellSize);
