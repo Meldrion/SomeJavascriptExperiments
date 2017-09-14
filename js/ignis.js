@@ -43,7 +43,9 @@ function getFullscreenDimension() {
 
 function startApp() {
     var dimension = getFullscreenDimension();
-    var app = new PIXI.Application(dimension[0], dimension[1], {backgroundColor: 0x1099bb});
+    var app = new PIXI.Application(dimension[0], dimension[1], {backgroundColor: 0x1099bb,
+                                                                autoStart: false,
+                                                                forceFXAA:true});
     var canvas = app.view;
     var mouseInside = false;
 
@@ -146,7 +148,6 @@ function startApp() {
         .on('touchmove', onDragMove);
      */
 
-
     app.stage.mousemove = function (event) {
         mouseX = Math.floor(event.data.global.x / 32) * 32;
         mouseY = Math.floor(event.data.global.y / 32) * 32;
@@ -157,6 +158,39 @@ function startApp() {
     app.stage.click = app.stage.mousemove;
     app.stage.tap = app.stage.click;
     app.stage.touchmove = app.stage.mousemove;
+
+    var oldX = -1;
+    var oldY = -1;
+    var lastTime = -1;
+    var inTimeOut = false;
+    var lastEvent = null;
+    canvas.onmousemove = function(event) {
+
+        lastEvent = event;
+        var newX = Math.floor(event.x / 32);
+        var newY = Math.floor(event.y / 32);
+        if (oldX !== newX || oldY !== newY) {
+            oldX = newX;
+            oldY = newY;
+
+            var date = new Date();
+            var time = date.getTime();
+            var delta = time - lastTime;
+
+            if (delta > 16) {
+                app.ticker.update();
+                lastTime = time;
+            } else {
+                if (!inTimeOut) {
+                    inTimeOut = true;
+                    window.setTimeout(function() {
+                        inTimeOut = false;
+                        canvas.onmousemove(lastEvent);
+                    },16 - delta);
+                }
+            }
+        }
+    };
 
     // Listen for animate update
     var position = [];
@@ -172,6 +206,7 @@ function startApp() {
     app.stage.updateLayersOrder();
 
     app.ticker.add(function (delta) {
+
         graphics.clear();
         //graphics.drawRect(getRandomInt(0, dimension[0]), getRandomInt(0, dimension[1]), 32, 32);
         cursorSprite.visible = mouseInside;
@@ -194,12 +229,16 @@ function startApp() {
         down.press = function() {
             moveBottom(app.stage,matrix,dim,position,32);
         }
-
     });
+
+    /*
+    window.setInterval(function() {
+        app.ticker.update();
+    },32);*/
 
     window.onresize = function () {
         app.renderer.resize(window.innerWidth, window.innerHeight);
-    }
+    };
 }
 
 window.onload = function () {
